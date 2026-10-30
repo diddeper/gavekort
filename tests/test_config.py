@@ -8,7 +8,8 @@ from tests.conftest import write_config
 
 def test_loads_valid_config(tmp_path: Path) -> None:
     cfg = load(write_config(tmp_path))
-    assert cfg.brand.logo == (tmp_path / "logo.png").resolve()
+    assert cfg.brand.mark == (tmp_path / "mark.svg").resolve()
+    assert cfg.brand.name == "Test Testesen"
     assert cfg.cards[CardType.MIN_90].title == "90 minutter massasje"
     assert cfg.output_dir == tmp_path / "output"
 
@@ -27,10 +28,10 @@ def test_rejects_bad_color(tmp_path: Path) -> None:
         load(path)
 
 
-def test_rejects_missing_logo(tmp_path: Path) -> None:
+def test_rejects_missing_mark(tmp_path: Path) -> None:
     path = write_config(tmp_path)
-    (tmp_path / "logo.png").unlink()
-    with pytest.raises(ConfigError, match="logo"):
+    (tmp_path / "mark.svg").unlink()
+    with pytest.raises(ConfigError, match="mark"):
         load(path)
 
 

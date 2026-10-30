@@ -16,14 +16,14 @@ Opening the page never changes anything; only the buttons do, and each one asks 
 ## Project layout
 
 ```
-config.toml            Brand (colours, logo, booking link), card titles, web app URL
-assets/logo.png        Logo used on the PDF
-assets/fonts/          Montserrat (SIL Open Font License, see OFL.txt), embedded in the PDFs
+config.toml            Brand (colours, name, mark, booking link), card titles, web app URL
+assets/mark.svg        Hands mark drawn in the corner of the PDF
+assets/fonts/          Montserrat Light/Regular/Medium (SIL Open Font License, see OFL.txt), embedded in the PDFs
 src/gavekort/
   config.py            Loads and validates config.toml
   codes.py             Unguessable, readable codes like GK-7F3K-9QXA
   qr.py                The single QR source: URL, PNG, SVG, vector matrix
-  card.py              Draws the A6 landscape gift card PDF
+  card.py              Draws the gift card PDF (148 x 93 mm, design "1c alt 3")
   batch.py             Generates a batch: files + batch.csv / import.csv
   cli.py               `gavekort generate` / `gavekort preview`
 apps_script/
@@ -77,12 +77,13 @@ Edit `config.toml`:
 - `validity_text`: the validity line printed on the card. Keep it in line with the `VALIDITY_MONTHS` script property.
 - `[brand]`:
   - `background_color`, `text_color`: hex colours.
-  - `logo`: PNG, preferably with a transparent background.
+  - `name`, `tagline`: the large name and the small uppercase line under it. Leave either empty to drop it.
+  - `mark`: single-colour SVG drawn large in the bottom-right corner, in `text_color`. Only straight-line paths (`M`, `L`, `H`, `V`, `Z`) are supported.
   - `booking_url`: where the booking line on the card links to.
-  - `booking_text`: the clickable booking line, e.g. "Bestill time på nett – trykk her". Leave it empty to print a shortened URL instead, which is better for cards that will be printed.
-  - `font_regular` / `font_bold`: `.ttf` files (Montserrat Regular / SemiBold by default).
+  - `booking_text`: the clickable booking line, e.g. "Book time – trykk her" (printed in uppercase). Leave it empty to print a shortened URL instead, which is better for cards that will be printed.
+  - `font_light` / `font_regular` / `font_bold`: `.ttf` files (Montserrat Light / Regular / Medium by default). Light is used for the name and title, bold for labels, the code and the booking link.
   - `business_name`: only stored as the PDF's author; it is not printed on the card.
-- `[cards.60]` / `[cards.90]`: the titles printed on the cards.
+- `[cards.60]` / `[cards.90]`: card titles, used in the PDF metadata (title and code are not printed on the card; the sheet tracks them).
 
 Check the design (this opens the PDF in Preview):
 

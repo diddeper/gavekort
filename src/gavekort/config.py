@@ -31,12 +31,18 @@ class Brand:
     """Visual identity shared by all cards."""
 
     business_name: str
+    name: str
+    """Large name printed on the card, e.g. "Janne Legreid"."""
+    tagline: str
+    """Small uppercase line under the name, e.g. "Muskel- og massasjeterapeut"."""
     background_color: str
     text_color: str
-    logo: Path | None
+    mark: Path | None
+    """Single-color SVG drawn large in the bottom-right corner."""
     booking_url: str
     booking_text: str
     """Footer line shown on the card; clicking it opens ``booking_url``."""
+    font_light: Path | None
     font_regular: Path | None
     font_bold: Path | None
 
@@ -76,7 +82,7 @@ class Config:
 def load(path: Path) -> Config:
     """Read and validate the configuration file at ``path``.
 
-    Relative file paths in the config (logo, fonts) are resolved against the
+    Relative file paths in the config (mark, fonts) are resolved against the
     directory that contains the config file.
 
     Raises:
@@ -108,12 +114,15 @@ def _parse_brand(table: Mapping[str, object], base: Path) -> Brand:
     _require_https(booking_url, "brand.booking_url")
     return Brand(
         business_name=_str(table, "business_name"),
+        name=_str(table, "name", required=False),
+        tagline=_str(table, "tagline", required=False),
         background_color=_color(table, "background_color"),
         text_color=_color(table, "text_color"),
-        logo=_file(table, "logo", base),
+        mark=_file(table, "mark", base),
         booking_url=booking_url,
         booking_text=_str(table, "booking_text", required=False)
         or f"Bestill time: {_display_url(booking_url)}",
+        font_light=_file(table, "font_light", base),
         font_regular=_file(table, "font_regular", base),
         font_bold=_file(table, "font_bold", base),
     )

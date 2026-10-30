@@ -3,11 +3,12 @@ import io
 from pathlib import Path
 from typing import cast
 
+import pytest
 from pypdf import PdfReader
 from pypdf.generic import ArrayObject, DictionaryObject
-from reportlab.lib.pagesizes import A6, landscape
+from reportlab.lib.units import mm
 
-from gavekort.card import render_card
+from gavekort.card import PAGE_SIZE, render_card
 from gavekort.config import CardType, Config
 from tests.conftest import BOOKING_URL
 
@@ -25,20 +26,23 @@ def _render(cfg: Config) -> PdfReader:
     return PdfReader(io.BytesIO(pdf))
 
 
-def test_single_a6_landscape_page(cfg: Config) -> None:
+def test_single_page_148mm_wide_with_card_proportions(cfg: Config) -> None:
     reader = _render(cfg)
     assert len(reader.pages) == 1
-    width, height = landscape(A6)
     box = reader.pages[0].mediabox
-    assert (round(float(box.width)), round(float(box.height))) == (round(width), round(height))
+    assert round(float(box.width)) == round(148 * mm)
+    assert (round(float(box.width)), round(float(box.height))) == tuple(map(round, PAGE_SIZE))
+    assert float(box.width) / float(box.height) == pytest.approx(1012 / 638)
 
 
-def test_contains_code_title_and_validity(cfg: Config) -> None:
-    # Normalise whitespace: the title may wrap over two lines.
-    text = " ".join(_render(cfg).pages[0].extract_text().split())
-    assert "GK-ABCD-EFGH" in text
-    assert "60 minutter massasje" in text
-    assert "Gyldig i 12 måneder fra kjøpsdato" in text
+def test_contains_name_and_validity_but_not_code_or_title(cfg: Config) -> None:
+    # Compare without spaces: letter spacing may split words in the extracted text.
+    text = "".join(_render(cfg).pages[0].extract_text().split())
+    assert "TestTestesen" in text
+    assert "Gyldigi12månederfrakjøpsdato" in text
+    # Code and treatment are tracked in the sheet, not printed on the card.
+    assert "GK-ABCD-EFGH" not in text
+    assert "minutter" not in text
 
 
 def test_booking_link_is_clickable(cfg: Config) -> None:
@@ -54,8 +58,9 @@ def test_booking_link_is_clickable(cfg: Config) -> None:
 def test_embeds_configured_brand_font(cfg: Config) -> None:
     brand = dataclasses.replace(
         cfg.brand,
+        font_light=FONTS / "Montserrat-Light.ttf",
         font_regular=FONTS / "Montserrat-Regular.ttf",
-        font_bold=FONTS / "Montserrat-SemiBold.ttf",
+        font_bold=FONTS / "Montserrat-Medium.ttf",
     )
     cfg = dataclasses.replace(cfg, brand=brand)
     page = _render(cfg).pages[0]
@@ -63,6 +68,18 @@ def test_embeds_configured_brand_font(cfg: Config) -> None:
     fonts = cast(DictionaryObject, resources["/Font"])
     base_fonts = {str(cast(DictionaryObject, f.get_object())["/BaseFont"]) for f in fonts.values()}
     assert any("Montserrat-Regular" in name for name in base_fonts)
-    assert any("Montserrat-SemiBold" in name for name in base_fonts)
-    assert not any("Courier" in name for name in base_fonts)
-    assert "GK-ABCD-EFGH" in page.extract_text()
+    assert any("Montserrat-Light" in name for name in base_fonts)
+    assert any("Montserrat-Medium" in name for name in base_fonts)
+    assert "GAVEKORT" in "".join(page.extract_text().split())
+
+
+def test_rejects_mark_with_curves(cfg: Config, tmp_path: Path) -> None:
+    mark = tmp_path / "curvy.svg"
+    mark.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">'
+        '<path d="M0 0C1 1 2 2 3 3Z"/></svg>',
+        encoding="utf-8",
+    )
+    cfg = dataclasses.replace(cfg, brand=dataclasses.replace(cfg.brand, mark=mark))
+    with pytest.raises(ValueError, match="path commands"):
+        _render(cfg)
