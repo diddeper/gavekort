@@ -26,6 +26,7 @@ background_color = "#F3EDE6"
 text_color = "#3B2F2A"
 mark = "mark.svg"
 booking_url = "{booking_url}"
+scan_text = "Skannes ved oppmøte"
 
 [cards.60]
 title = "60 minutter massasje"

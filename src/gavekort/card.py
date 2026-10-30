@@ -1,12 +1,15 @@
 """Draw a branded gift card PDF with reportlab.
 
 The layout follows design "1c alt 3" (``Gavekort.dc.html`` in Claude Design):
-"GAVEKORT" with the validity line opposite it, name and tagline top left, a large
-QR above the booking link bottom left, and the hands mark bleeding off the
-bottom-right corner. The design is drawn on a 1012 x 638
-px canvas; :class:`_Layout` keeps its measurements in those pixels and
-:func:`_px` scales them to the 148 mm wide page, so values can be copied
+"GAVEKORT" with the validity line opposite it, name, tagline and booking link
+top left, a large QR with a small "skannes ved oppmøte" caption bottom left,
+and the hands mark bleeding off the bottom-right corner. The design is drawn on
+a 1012 x 638 px canvas; :data:`LAYOUT` keeps its measurements in those pixels
+and :func:`_px` scales them to the 148 mm wide page, so values can be copied
 straight from the design.
+
+The scan page (``apps_script/Side.html``) mirrors the text styles and gaps as
+CSS variables; ``tests/test_brand.py`` keeps the two in sync.
 """
 
 import io
@@ -34,6 +37,7 @@ PAGE_SIZE: tuple[float, float] = (_PAGE_WIDTH, _PAGE_WIDTH * _DESIGN_HEIGHT / _D
 # Montserrat's vertical metrics (per 1 em), used to place baselines like a browser does.
 _ASCENT = 0.968
 _DESCENT = 0.251
+_CAP_HEIGHT = 0.7
 
 _FILL_EVEN_ODD = 0
 """reportlab's even-odd fill mode (``canvas.FILL_EVEN_ODD``, missing from the type stubs)."""
@@ -45,7 +49,7 @@ def _px(value: float) -> float:
 
 
 @dataclass(frozen=True, slots=True)
-class _Text:
+class TextStyle:
     """A text style: size in design px, letter spacing in em."""
 
     size: float
@@ -54,29 +58,32 @@ class _Text:
 
 
 @dataclass(frozen=True, slots=True)
-class _Layout:
+class Layout:
     """Layout measurements in design pixels (see :func:`_px`)."""
 
     pad_x: float = 68
     pad_y: float = 60
-    eyebrow: _Text = _Text(20, 0.28, 1)
-    validity: _Text = _Text(12, 0.06, 1)
+    eyebrow: TextStyle = TextStyle(20, 0.28, 1)
+    validity: TextStyle = TextStyle(12, 0.06, 1)
     eyebrow_bottom: float = 14
     top_gap: float = 12
-    name: _Text = _Text(52, 0.08, 1.05)
+    name: TextStyle = TextStyle(52, 0.08, 1.05)
     name_gap: float = 10
-    tagline: _Text = _Text(16, 0.26)
-    qr_size: float = 220
-    qr_link_gap: float = 16
-    link: _Text = _Text(14, 0.18)
+    tagline: TextStyle = TextStyle(16, 0.26)
+    link: TextStyle = TextStyle(14, 0.18)
+    link_gap: float = 36
     link_underline_gap: float = 4
+    qr_size: float = 220
+    scan: TextStyle = TextStyle(11, 0.2)
+    scan_gap: float = 12
     mark_height: float = 520
     mark_right: float = -110
     mark_bottom: float = -60
     mark_opacity: float = 0.9
 
 
-_LAYOUT = _Layout()
+LAYOUT = Layout()
+"""The card's measurements; text styles and gaps are shared with the scan page."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,7 +118,7 @@ def render_card(spec: CardSpec, brand: Brand, code: str, url: str, validity_text
 
     fonts = _register_fonts(brand)
     text_color = HexColor(brand.text_color)
-    lay = _LAYOUT
+    lay = LAYOUT
 
     c.setFillColor(HexColor(brand.background_color))
     c.rect(0, 0, width, height, stroke=0, fill=1)
@@ -125,76 +132,82 @@ def render_card(spec: CardSpec, brand: Brand, code: str, url: str, validity_text
         c.restoreState()
 
     c.setFillColor(text_color)
+    c.setStrokeColor(text_color)
     left = lay.pad_x
     right = _DESIGN_WIDTH - lay.pad_x
 
-    # Top row: eyebrow left, validity right on the same baseline.
+    # Top row: eyebrow left, validity right, vertically centred on each other.
     top = lay.pad_y
     _draw_text(c, "GAVEKORT", fonts.bold, lay.eyebrow, left, top)
-    validity_top = top + _baseline(lay.eyebrow) - _baseline(lay.validity)
+    validity_top = top + _cap_middle(lay.eyebrow) - _cap_middle(lay.validity)
     validity_width = _text_width(validity_text, fonts.regular, lay.validity)
     _draw_text(c, validity_text, fonts.regular, lay.validity, right - validity_width, validity_top)
     top += _line_height(lay.eyebrow) + lay.eyebrow_bottom + lay.top_gap
 
-    # Name and tagline.
+    # Name, tagline and booking link. The link is kept away from the QR so customers
+    # don't take the QR for a booking link.
     if brand.name:
         _draw_text(c, brand.name, fonts.light, lay.name, left, top)
         top += _line_height(lay.name) + lay.name_gap
     if brand.tagline:
         _draw_text(c, brand.tagline.upper(), fonts.regular, lay.tagline, left, top)
+        top += _line_height(lay.tagline)
+    _draw_link(c, brand, fonts.bold, left, top + lay.link_gap)
 
-    # Bottom block: QR centred above the underlined booking link, bottom-aligned.
-    booking_text = brand.booking_text.upper()
-    link_width = _text_width(booking_text, fonts.bold, lay.link)
-    column_width = max(lay.qr_size, link_width)
-    underline_y = _DESIGN_HEIGHT - lay.pad_y - 0.5
-    link_top = underline_y - 0.5 - lay.link_underline_gap - _line_height(lay.link)
-    link_left = left + (column_width - link_width) / 2
-    qr_top = link_top - lay.qr_link_gap - lay.qr_size
-    _draw_qr(c, url, left + (column_width - lay.qr_size) / 2, qr_top, lay.qr_size)
-
-    _draw_text(c, booking_text, fonts.bold, lay.link, link_left, link_top)
-    c.setStrokeColor(text_color)
-    c.setLineWidth(_px(1))
-    c.line(
-        _px(link_left),
-        height - _px(underline_y),
-        _px(link_left + link_width),
-        height - _px(underline_y),
-    )
-    c.linkURL(
-        brand.booking_url,
-        (
-            _px(link_left),
-            height - _px(underline_y + 1),
-            _px(link_left + link_width),
-            height - _px(link_top),
-        ),
-        relative=0,
-    )
+    # QR bottom left, with the scan caption centred under it.
+    qr_bottom = _DESIGN_HEIGHT - lay.pad_y
+    if brand.scan_text:
+        scan_text = brand.scan_text.upper()
+        scan_top = qr_bottom - _line_height(lay.scan)
+        scan_left = left + (lay.qr_size - _text_width(scan_text, fonts.regular, lay.scan)) / 2
+        _draw_text(c, scan_text, fonts.regular, lay.scan, scan_left, scan_top)
+        qr_bottom = scan_top - lay.scan_gap
+    _draw_qr(c, url, left, qr_bottom - lay.qr_size, lay.qr_size)
 
     c.showPage()
     c.save()
     return buffer.getvalue()
 
 
-def _line_height(style: _Text) -> float:
+def _draw_link(c: Canvas, brand: Brand, font: str, left: float, top: float) -> None:
+    """Draw the underlined, clickable booking link with its line box at ``(left, top)``."""
+    lay = LAYOUT
+    text = brand.booking_text.upper()
+    right = left + _text_width(text, font, lay.link)
+    underline_y = top + _line_height(lay.link) + lay.link_underline_gap + 0.5
+    _draw_text(c, text, font, lay.link, left, top)
+    page_height = PAGE_SIZE[1]
+    c.setLineWidth(_px(1))
+    c.line(_px(left), page_height - _px(underline_y), _px(right), page_height - _px(underline_y))
+    c.linkURL(
+        brand.booking_url,
+        (_px(left), page_height - _px(underline_y + 1), _px(right), page_height - _px(top)),
+        relative=0,
+    )
+
+
+def _line_height(style: TextStyle) -> float:
     return style.size * style.line_height
 
 
-def _baseline(style: _Text) -> float:
+def _baseline(style: TextStyle) -> float:
     """Distance from the top of a CSS line box to its baseline, in design px."""
     half_leading = (_line_height(style) - style.size * (_ASCENT + _DESCENT)) / 2
     return half_leading + style.size * _ASCENT
 
 
-def _text_width(text: str, font: str, style: _Text) -> float:
+def _cap_middle(style: TextStyle) -> float:
+    """Distance from the top of a line box to the middle of its capital letters."""
+    return _baseline(style) - style.size * _CAP_HEIGHT / 2
+
+
+def _text_width(text: str, font: str, style: TextStyle) -> float:
     """Width in design px, including the trailing letter spacing (as CSS does)."""
     width = pdfmetrics.stringWidth(text, font, style.size)
     return width + style.size * style.tracking * len(text)
 
 
-def _draw_text(c: Canvas, text: str, font: str, style: _Text, x: float, top: float) -> None:
+def _draw_text(c: Canvas, text: str, font: str, style: TextStyle, x: float, top: float) -> None:
     """Draw one line whose CSS line box starts at design coordinates ``(x, top)``."""
     baseline = top + _baseline(style)
     c.setFont(font, _px(style.size))
@@ -225,7 +238,7 @@ def _draw_qr(c: Canvas, url: str, x: float, top: float, size: float) -> None:
 
 def _draw_mark(c: Canvas, mark: _Mark) -> None:
     """Draw the mark scaled to ``mark_height``, offset from the bottom-right corner."""
-    lay = _LAYOUT
+    lay = LAYOUT
     scale = _px(lay.mark_height) / mark.height
     right = PAGE_SIZE[0] - _px(lay.mark_right)
     bottom = _px(lay.mark_bottom)

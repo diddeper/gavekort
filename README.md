@@ -81,6 +81,7 @@ Edit `config.toml`:
   - `mark`: single-colour SVG drawn large in the bottom-right corner, in `text_color`. Only straight-line paths (`M`, `L`, `H`, `V`, `Z`) are supported.
   - `booking_url`: where the booking line on the card links to.
   - `booking_text`: the clickable booking line, e.g. "Book time – trykk her" (printed in uppercase). Leave it empty to print a shortened URL instead, which is better for cards that will be printed.
+  - `scan_text`: small caption under the QR, e.g. "Skannes ved oppmøte", so customers don't take the QR for a booking link. Leave it empty to drop it.
   - `font_light` / `font_regular` / `font_bold`: `.ttf` files (Montserrat Light / Regular / Medium by default). Light is used for the name and title, bold for labels, the code and the booking link.
   - `business_name`: only stored as the PDF's author; it is not printed on the card.
 - `[cards.60]` / `[cards.90]`: card titles, used in the PDF metadata (title and code are not printed on the card; the sheet tracks them).

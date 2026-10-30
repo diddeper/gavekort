@@ -16,6 +16,7 @@ text_color = "#111111"
 mark = "assets/mark.svg"                       # single-color SVG (straight-line paths); "" for none
 booking_url = "https://system.easypractice.net/book/legreid-muskel-og-massasjeterapeut#choose-service"
 booking_text = "Book time – trykk her"          # clickable in the PDF; empty → shortened URL
+scan_text = "Skannes ved oppmøte"              # small caption under the QR; "" to leave out
 font_light = "assets/fonts/Montserrat-Light.ttf"       # name and title; empty → regular
 font_regular = "assets/fonts/Montserrat-Regular.ttf"   # optional .ttf; empty → Helvetica
 font_bold = "assets/fonts/Montserrat-Medium.ttf"       # labels, code and booking link; empty → regular

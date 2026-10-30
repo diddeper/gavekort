@@ -40,6 +40,7 @@ def test_contains_name_and_validity_but_not_code_or_title(cfg: Config) -> None:
     text = "".join(_render(cfg).pages[0].extract_text().split())
     assert "TestTestesen" in text
     assert "Gyldigi12månederfrakjøpsdato" in text
+    assert "SKANNESVEDOPPMØTE" in text
     # Code and treatment are tracked in the sheet, not printed on the card.
     assert "GK-ABCD-EFGH" not in text
     assert "minutter" not in text

@@ -5,13 +5,25 @@
   <meta charset="utf-8">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      /* Brand colours: must match background_color / text_color in config.toml
-         (tests/test_brand.py checks this). */
+      /* Shared with the PDF card; tests/test_brand.py keeps these in sync.
+         Colours match background_color / text_color in config.toml. */
       --bg: #c6a792; --text: #111111;
-      --card: #FFFFFF; --muted: color-mix(in srgb, var(--text) 60%, var(--card));
+      /* Weights match font_light / font_regular / font_bold (Montserrat Light/Regular/Medium). */
+      --light: 300; --regular: 400; --medium: 500;
+      /* Text styles and gaps match LAYOUT in src/gavekort/card.py (sizes in px, tracking in em). */
+      --eyebrow-size: 20px; --eyebrow-tracking: .28em;
+      --validity-size: 12px; --validity-tracking: .06em;
+      --name-size: 52px; --name-tracking: .08em;
+      --tagline-size: 16px; --tagline-tracking: .26em;
+      --link-size: 14px; --link-tracking: .18em;
+      --eyebrow-bottom: 14px; --top-gap: 12px; --name-gap: 10px;
+      --link-gap: 36px; --link-underline-gap: 4px;
+
+      /* Page-only: muted text and status colours. */
+      --muted: color-mix(in srgb, var(--text) 65%, var(--bg));
       --green: #1E6B3C; --green-bg: #D9F2E3;
       --red: #8A1F1F; --red-bg: #F8DADA;
       --grey: #555555; --grey-bg: #EEEEEE;
@@ -19,30 +31,47 @@
     }
     * { box-sizing: border-box; }
     body {
-      margin: 0; padding: 24px 16px; min-height: 100vh;
-      font: 17px/1.45 "Montserrat", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      margin: 0; padding: 32px 24px; min-height: 100vh;
+      font: var(--regular) var(--tagline-size)/1.45 "Montserrat", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
       background: var(--bg); color: var(--text);
     }
-    main { max-width: 420px; margin: 0 auto; background: var(--card);
-           border-radius: 18px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
-    h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
-    .code { font-weight: 600; color: var(--muted); letter-spacing: .08em; }
-    .badge { display: inline-block; margin: 18px 0 8px; padding: 8px 16px; border-radius: 999px;
-             font-weight: 700; font-size: 20px; }
+    main { max-width: 420px; margin: 0 auto; }
+    p { margin: 0 0 var(--top-gap); }
+
+    /* Same roles as on the card. */
+    .top { display: flex; align-items: center; justify-content: space-between; gap: var(--top-gap);
+           margin-bottom: calc(var(--eyebrow-bottom) + var(--top-gap)); }
+    .eyebrow { font-size: var(--eyebrow-size); font-weight: var(--medium); letter-spacing: var(--eyebrow-tracking);
+               line-height: 1; text-transform: uppercase; margin: 0; }
+    .validity { font-size: var(--validity-size); letter-spacing: var(--validity-tracking); line-height: 1; }
+    .name { font-size: var(--name-size); font-weight: var(--light); letter-spacing: var(--name-tracking);
+            line-height: 1.05; margin: 0 0 var(--name-gap); }
+    .tagline { font-size: var(--tagline-size); letter-spacing: var(--tagline-tracking); text-transform: uppercase; }
+    .link { display: inline-block; margin-top: var(--link-gap); font-size: var(--link-size); font-weight: var(--medium);
+            letter-spacing: var(--link-tracking); text-transform: uppercase; text-decoration: none;
+            border-bottom: 1px solid var(--text); padding-bottom: var(--link-underline-gap); }
+
+    .badge { display: inline-block; margin: var(--name-gap) 0 0; padding: 8px 14px; border-radius: 999px;
+             font-size: var(--link-size); font-weight: var(--medium); letter-spacing: var(--link-tracking);
+             text-transform: uppercase; }
     .badge.not-sold { background: var(--grey-bg); color: var(--grey); }
     .badge.active   { background: var(--green-bg); color: var(--green); }
     .badge.redeemed { background: var(--red-bg); color: var(--red); }
     /* minmax(0, …) lets the value column shrink, so long emails wrap instead of overflowing. */
-    dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 16px 0; }
-    dt { color: var(--muted); white-space: nowrap; }
-    dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
-    .note { padding: 12px 14px; border-radius: 12px; margin: 14px 0; }
+    dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: baseline;
+         gap: var(--name-gap) var(--eyebrow-bottom); margin: var(--link-gap) 0 0; }
+    dt { color: var(--muted); font-size: var(--validity-size); letter-spacing: var(--validity-tracking);
+         text-transform: uppercase; white-space: nowrap; }
+    dd { margin: 0; font-weight: var(--medium); overflow-wrap: anywhere; }
+    .note { padding: var(--top-gap) var(--eyebrow-bottom); border-radius: var(--top-gap); margin: var(--eyebrow-bottom) 0 0; }
     .note.warn { background: var(--warn-bg); color: var(--warn); }
     .note.info { background: var(--green-bg); color: var(--green); }
-    button { width: 100%; padding: 16px; margin-top: 10px; border: 0; border-radius: 14px;
-             font: inherit; font-weight: 700; cursor: pointer; }
-    button.primary { background: var(--text); color: #fff; }
-    button.secondary { background: var(--grey-bg); color: var(--text); }
+    .actions { margin-top: var(--link-gap); }
+    button { display: block; width: 100%; padding: 16px; margin-top: var(--name-gap); border: 1px solid var(--text);
+             border-radius: var(--eyebrow-bottom); font: inherit; font-size: var(--link-size); font-weight: var(--medium);
+             letter-spacing: var(--link-tracking); text-transform: uppercase; cursor: pointer; }
+    button.primary { background: var(--text); color: var(--bg); }
+    button.secondary { background: transparent; color: var(--text); }
     button:disabled { opacity: .5; }
     a { color: var(--text); }
     [hidden] { display: none !important; }
@@ -83,45 +112,54 @@
                                   renderCard(view)));
     }
 
+    /** "GAVEKORT" with an optional small line opposite it, like the card's top row. */
+    function topRow(right) {
+      return el('div', { className: 'top' },
+        el('h1', { className: 'eyebrow', textContent: 'Gavekort' }),
+        right ? el('span', { className: 'validity', textContent: right }) : []);
+    }
+
     function renderDenied(view) {
       const nodes = [
-        el('h1', { textContent: 'Gavekort' }),
+        topRow(),
         el('p', { textContent: 'Dette gavekortet løses inn når du kommer til timen din. Vis det frem ved oppmøte.' }),
       ];
       if (view.bookingUrl) {
-        nodes.push(el('p', {}, 'Bestill time: ', el('a', { href: view.bookingUrl, textContent: view.bookingUrl })));
+        nodes.push(el('a', { className: 'link', href: view.bookingUrl, textContent: 'Book time – trykk her' }));
       }
       return nodes;
     }
 
     function renderUnknown(view) {
       return [
-        el('h1', { textContent: 'Ukjent gavekort' }),
-        el('p', { className: 'code', textContent: view.code || '(ingen kode)' }),
+        topRow(view.code || '(ingen kode)'),
+        el('p', { className: 'name', textContent: 'Ukjent' }),
         el('div', { className: 'note warn',
           textContent: 'Koden finnes ikke i arket. Sjekk at batchens CSV er importert, eller at QR-koden er riktig.' }),
       ];
     }
 
     function renderCard(view) {
-      const rows = [['Behandling', `${view.type} min`]];
+      const rows = [];
       if (view.activated) rows.push(['Aktivert', view.activated]);
       if (view.expires) rows.push(['Utløper', view.expires]);
       if (view.redeemed) rows.push(['Innløst', view.redeemed]);
       if (view.redeemedBy) rows.push(['Innløst av', view.redeemedBy]);
 
       const nodes = [
-        el('h1', { textContent: `Gavekort ${view.type} min` }),
-        el('div', { className: 'code', textContent: view.code }),
+        topRow(view.code),
+        el('p', { className: 'name', textContent: `${view.type} min` }),
         el('div', { className: `badge ${BADGE_CLASS[view.status] || 'not-sold'}`, textContent: view.status }),
-        el('dl', {}, rows.map(([k, v]) => [el('dt', { textContent: k }), el('dd', {}, breakAfterAt(v))])),
       ];
+      if (rows.length) {
+        nodes.push(el('dl', {}, rows.map(([k, v]) => [el('dt', { textContent: k }), el('dd', {}, breakAfterAt(v))])));
+      }
       if (view.message) nodes.push(el('div', { className: 'note info', textContent: view.message }));
       if (view.expired && view.status === 'Aktiv') {
         nodes.push(el('div', { className: 'note warn', textContent: `Utløpt ${view.expires}. Du kan fortsatt løse det inn om du vil.` }));
       }
       const action = ACTIONS[view.status];
-      if (action) nodes.push(...renderAction(view.code, action));
+      if (action) nodes.push(el('div', { className: 'actions' }, renderAction(view.code, action)));
       return nodes;
     }
 

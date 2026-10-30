@@ -41,7 +41,9 @@ class Brand:
     """Single-color SVG drawn large in the bottom-right corner."""
     booking_url: str
     booking_text: str
-    """Footer line shown on the card; clicking it opens ``booking_url``."""
+    """Booking line shown on the card; clicking it opens ``booking_url``."""
+    scan_text: str
+    """Small caption under the QR, e.g. "Skannes ved oppmøte"; empty to omit."""
     font_light: Path | None
     font_regular: Path | None
     font_bold: Path | None
@@ -122,6 +124,7 @@ def _parse_brand(table: Mapping[str, object], base: Path) -> Brand:
         booking_url=booking_url,
         booking_text=_str(table, "booking_text", required=False)
         or f"Bestill time: {_display_url(booking_url)}",
+        scan_text=_str(table, "scan_text", required=False),
         font_light=_file(table, "font_light", base),
         font_regular=_file(table, "font_regular", base),
         font_bold=_file(table, "font_bold", base),
