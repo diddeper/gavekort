@@ -76,7 +76,7 @@ Edit `config.toml`:
 - `web_app_url`: the `/exec` URL from step 5. `generate` refuses to run without it.
 - `validity_text`: the validity line printed on the card. Keep it in line with the `VALIDITY_MONTHS` script property.
 - `[brand]`:
-  - `background_color`, `text_color`, `accent_color`: hex colours.
+  - `background_color`, `text_color`: hex colours.
   - `logo`: PNG, preferably with a transparent background.
   - `booking_url`: where the booking line on the card links to.
   - `booking_text`: the clickable booking line, e.g. "Bestill time på nett – trykk her". Leave it empty to print a shortened URL instead, which is better for cards that will be printed.

@@ -33,7 +33,6 @@ class Brand:
     business_name: str
     background_color: str
     text_color: str
-    accent_color: str
     logo: Path | None
     booking_url: str
     booking_text: str
@@ -105,14 +104,12 @@ def load(path: Path) -> Config:
 
 
 def _parse_brand(table: Mapping[str, object], base: Path) -> Brand:
-    text_color = _color(table, "text_color")
     booking_url = _str(table, "booking_url")
     _require_https(booking_url, "brand.booking_url")
     return Brand(
         business_name=_str(table, "business_name"),
         background_color=_color(table, "background_color"),
-        text_color=text_color,
-        accent_color=_color(table, "accent_color", default=text_color),
+        text_color=_color(table, "text_color"),
         logo=_file(table, "logo", base),
         booking_url=booking_url,
         booking_text=_str(table, "booking_text", required=False)
@@ -147,8 +144,8 @@ def _str(raw: Mapping[str, object], key: str, *, required: bool = True) -> str:
     return value
 
 
-def _color(raw: Mapping[str, object], key: str, *, default: str | None = None) -> str:
-    value = _str(raw, key, required=default is None) or default or ""
+def _color(raw: Mapping[str, object], key: str) -> str:
+    value = _str(raw, key)
     if not _HEX_COLOR.match(value):
         raise ConfigError(f"'{key}' must be a hex color like #A67C6D, got {value!r}")
     return value

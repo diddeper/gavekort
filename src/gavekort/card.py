@@ -69,7 +69,6 @@ def render_card(spec: CardSpec, brand: Brand, code: str, url: str, validity_text
 
     fonts = _register_fonts(brand)
     text_color = HexColor(brand.text_color)
-    accent_color = HexColor(brand.accent_color)
     lay = _LAYOUT
 
     c.setFillColor(HexColor(brand.background_color))
@@ -104,7 +103,7 @@ def render_card(spec: CardSpec, brand: Brand, code: str, url: str, validity_text
     else:
         top -= 8 * mm
 
-    c.setFillColor(accent_color)
+    c.setFillColor(text_color)
     c.setFont(fonts.bold, lay.eyebrow_size)
     c.drawString(left, top - lay.eyebrow_size, _spaced("GAVEKORT"))
     top -= lay.eyebrow_size + 5 * mm
@@ -117,7 +116,7 @@ def render_card(spec: CardSpec, brand: Brand, code: str, url: str, validity_text
 
     # Footer: validity and clickable booking link.
     footer_y = lay.margin
-    c.setFillColor(accent_color)
+    c.setFillColor(text_color)
     c.setFont(fonts.regular, lay.footer_size)
     c.drawString(left, footer_y + lay.footer_size * 1.6, validity_text)
     booking_text = brand.booking_text

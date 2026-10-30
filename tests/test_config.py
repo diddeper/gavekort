@@ -8,7 +8,6 @@ from tests.conftest import write_config
 
 def test_loads_valid_config(tmp_path: Path) -> None:
     cfg = load(write_config(tmp_path))
-    assert cfg.brand.accent_color == cfg.brand.text_color  # defaults when omitted
     assert cfg.brand.logo == (tmp_path / "logo.png").resolve()
     assert cfg.cards[CardType.MIN_90].title == "90 minutter massasje"
     assert cfg.output_dir == tmp_path / "output"

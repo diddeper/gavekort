@@ -11,7 +11,6 @@ output_dir = "output"
 business_name = "Legreid muskel- og massasjeterapeut"  
 background_color = "#c6a792"
 text_color = "#111111"
-accent_color = "#111111"                       # optional, defaults to text_color
 logo = "assets/logo.png"                       # PNG, transparent background works best; "" for none
 booking_url = "https://system.easypractice.net/book/legreid-muskel-og-massasjeterapeut#choose-service"
 booking_text = "Bestill time på nett – trykk her"  # clickable in the PDF; empty → shortened URL

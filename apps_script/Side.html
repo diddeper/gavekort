@@ -8,7 +8,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #F3EDE6; --card: #FFFFFF; --text: #3B2F2A; --muted: #7A6A62;
+      /* Brand colours: must match background_color / text_color in config.toml
+         (tests/test_brand.py checks this). */
+      --bg: #c6a792; --text: #111111;
+      --card: #FFFFFF; --muted: color-mix(in srgb, var(--text) 60%, var(--card));
       --green: #1E6B3C; --green-bg: #D9F2E3;
       --red: #8A1F1F; --red-bg: #F8DADA;
       --grey: #555555; --grey-bg: #EEEEEE;
