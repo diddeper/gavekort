@@ -130,7 +130,7 @@ Each batch goes into its own folder, e.g. `output/2026-10-30_1312_60min/`, which
 1. Add the person's Google email to the `ALLOWED_EMAILS` script property (comma-separated).
 2. Share the spreadsheet with that email as **Editor**.
 3. On their iPhone, in Safari, sign in to Google with **only** that account: go to google.com → profile picture → *Sign out of all accounts* (*Logg av alle kontoer*) → sign in again with just that one. With several accounts signed in, Google may pick the wrong one and show *"Beklager, filen kan ikke åpnes"*.
-4. Open the `/exec` URL once and approve the permissions. Then scan a card: you should see its status and buttons. If you see the booking page instead, step 1 or 2 is missing.
+4. Open the `/exec` URL once and approve the permissions. Then scan a card: you should see its status and buttons. If you see the booking page instead, step 1 is missing; if you see *"Kontoen din har ikke tilgang til regnearket"*, step 2 is.
 
 ## Updating the script
 
@@ -163,7 +163,8 @@ Every QR code you have printed contains the `/exec` URL. After you change the sc
 | Symptom | Fix |
 |---|---|
 | *"Sorry, unable to open the file"* / *"Beklager, filen kan ikke åpnes"* | Usually several Google accounts signed in to the browser (a link containing `/u/1/` is a sign of this). Sign out of all accounts and sign in with only the allowlisted one. On iPhone, Chrome also picks up accounts from other Google apps. |
-| The booking page is shown instead of the card | Your email is not in `ALLOWED_EMAILS`, or the sheet isn't shared with you. |
+| The booking page is shown instead of the card | Your email is not in `ALLOWED_EMAILS`. |
+| *"Kontoen din har ikke tilgang til regnearket"* / *"Du har ikke tillatelse til å se det forespurte dokumentet"* | The email is in `ALLOWED_EMAILS`, but the spreadsheet isn't shared with that exact Google account. Share it with that address as **Editor**. |
 | *"Beklager, filen kan ikke åpnes"* only on card links, while the bare `/exec` URL works | The card URL uses a parameter Apps Script reserves (`c` or `sid`). Cards use `?kode=`; regenerate any old QR codes made with `?c=`. |
 | "Ukjent gavekort" | The batch's `import.csv` hasn't been imported, or it was imported into a different tab than `Gavekort`. |
 | "Fant ikke arket «Gavekort»" | The **tab** (bottom of the window, not the file name) must be named exactly `Gavekort`, with no trailing space. If it is, the script belongs to a different spreadsheet: open *Extensions → Apps Script* from the spreadsheet with the data and check that its deployment URL matches `web_app_url`. The error log is under *Executions* (*Utføringer*) in the editor. |

@@ -204,7 +204,13 @@ function findCard_(code) {
   if (!CODE_PATTERN.test(code)) {
     return null;
   }
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  let sheet;
+  try {
+    sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  } catch (err) {
+    // Runs as the scanning user: fails if the spreadsheet isn't shared with them.
+    throw new Error('Kontoen din har ikke tilgang til regnearket. Be eieren dele det med deg som redigerer.');
+  }
   if (!sheet) {
     throw new Error(`Fant ikke arket «${SHEET_NAME}». Kjør setupSheet først.`);
   }
