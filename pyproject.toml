@@ -1,0 +1,50 @@
+[project]
+name = "gavekort"
+version = "0.1.0"
+description = "Generate QR gift cards for 60/90 min massages, redeemed via Google Sheets + Apps Script."
+authors = [
+    { name = "Didrik", email = "didrik.stordahl@nrk.no" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "pillow>=13.0.0",
+    "reportlab>=5.1.0",
+    "segno>=1.6.6",
+]
+
+[project.scripts]
+gavekort = "gavekort.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.10.0,<0.11.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.1",
+    "pypdf>=6.21.4",
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+    "types-reportlab>=5.0.0.20261008",
+]
+
+[tool.mypy]
+strict = true
+warn_unreachable = true
+files = ["src", "tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D100", "D103"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

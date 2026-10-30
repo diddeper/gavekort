@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F3EDE6; --card: #FFFFFF; --text: #3B2F2A; --muted: #7A6A62;
+      --green: #1E6B3C; --green-bg: #D9F2E3;
+      --red: #8A1F1F; --red-bg: #F8DADA;
+      --grey: #555555; --grey-bg: #EEEEEE;
+      --warn: #8A5A00; --warn-bg: #FFF1CC;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px 16px; min-height: 100vh;
+      font: 17px/1.45 "Montserrat", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    main { max-width: 420px; margin: 0 auto; background: var(--card);
+           border-radius: 18px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+    .code { font-weight: 600; color: var(--muted); letter-spacing: .08em; }
+    .badge { display: inline-block; margin: 18px 0 8px; padding: 8px 16px; border-radius: 999px;
+             font-weight: 700; font-size: 20px; }
+    .badge.not-sold { background: var(--grey-bg); color: var(--grey); }
+    .badge.active   { background: var(--green-bg); color: var(--green); }
+    .badge.redeemed { background: var(--red-bg); color: var(--red); }
+    dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 16px 0; }
+    dt { color: var(--muted); }
+    dd { margin: 0; font-weight: 600; }
+    .note { padding: 12px 14px; border-radius: 12px; margin: 14px 0; }
+    .note.warn { background: var(--warn-bg); color: var(--warn); }
+    .note.info { background: var(--green-bg); color: var(--green); }
+    button { width: 100%; padding: 16px; margin-top: 10px; border: 0; border-radius: 14px;
+             font: inherit; font-weight: 700; cursor: pointer; }
+    button.primary { background: var(--text); color: #fff; }
+    button.secondary { background: var(--grey-bg); color: var(--text); }
+    button:disabled { opacity: .5; }
+    a { color: var(--text); }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main id="app" aria-live="polite"></main>
+
+  <script>
+    /** Initial view rendered by doGet (JSON, already escaped server-side). */
+    const INITIAL = <?!= initialState ?>;
+
+    const BADGE_CLASS = { 'Ikke solgt': 'not-sold', 'Aktiv': 'active', 'Innløst': 'redeemed' };
+    const ACTIONS = {
+      'Ikke solgt': { label: 'Aktiver (solgt)', confirm: 'Bekreft aktivering', fn: 'activate' },
+      'Aktiv':      { label: 'Løs inn',         confirm: 'Bekreft innløsning', fn: 'redeem' },
+    };
+
+    const app = document.getElementById('app');
+
+    /** Create an element with text content (never innerHTML for data). */
+    function el(tag, props = {}, ...children) {
+      const node = Object.assign(document.createElement(tag), props);
+      children.flat(Infinity).forEach((c) => node.append(c));
+      return node;
+    }
+
+    function render(view) {
+      app.replaceChildren(...(
+        view.kind === 'denied'  ? renderDenied(view) :
+        view.kind === 'unknown' ? renderUnknown(view) :
+                                  renderCard(view)));
+    }
+
+    function renderDenied(view) {
+      const nodes = [
+        el('h1', { textContent: 'Gavekort' }),
+        el('p', { textContent: 'Dette gavekortet løses inn når du kommer til timen din. Vis det frem ved oppmøte.' }),
+      ];
+      if (view.bookingUrl) {
+        nodes.push(el('p', {}, 'Bestill time: ', el('a', { href: view.bookingUrl, textContent: view.bookingUrl })));
+      }
+      return nodes;
+    }
+
+    function renderUnknown(view) {
+      return [
+        el('h1', { textContent: 'Ukjent gavekort' }),
+        el('p', { className: 'code', textContent: view.code || '(ingen kode)' }),
+        el('div', { className: 'note warn',
+          textContent: 'Koden finnes ikke i arket. Sjekk at batchens CSV er importert, eller at QR-koden er riktig.' }),
+      ];
+    }
+
+    function renderCard(view) {
+      const rows = [['Behandling', `${view.type} min`]];
+      if (view.activated) rows.push(['Aktivert', view.activated]);
+      if (view.expires) rows.push(['Utløper', view.expires]);
+      if (view.redeemed) rows.push(['Innløst', view.redeemed]);
+      if (view.redeemedBy) rows.push(['Innløst av', view.redeemedBy]);
+
+      const nodes = [
+        el('h1', { textContent: `Gavekort ${view.type} min` }),
+        el('div', { className: 'code', textContent: view.code }),
+        el('div', { className: `badge ${BADGE_CLASS[view.status] || 'not-sold'}`, textContent: view.status }),
+        el('dl', {}, rows.map(([k, v]) => [el('dt', { textContent: k }), el('dd', { textContent: v })])),
+      ];
+      if (view.message) nodes.push(el('div', { className: 'note info', textContent: view.message }));
+      if (view.expired && view.status === 'Aktiv') {
+        nodes.push(el('div', { className: 'note warn', textContent: `Utløpt ${view.expires}. Du kan fortsatt løse det inn om du vil.` }));
+      }
+      const action = ACTIONS[view.status];
+      if (action) nodes.push(...renderAction(view.code, action));
+      return nodes;
+    }
+
+    /** Two-step button: first tap reveals confirm/cancel, second tap performs the action. */
+    function renderAction(code, action) {
+      const start = el('button', { className: 'primary', textContent: action.label });
+      const confirm = el('button', { className: 'primary', textContent: action.confirm, hidden: true });
+      const cancel = el('button', { className: 'secondary', textContent: 'Avbryt', hidden: true });
+      const toggle = (confirming) => {
+        start.hidden = confirming; confirm.hidden = !confirming; cancel.hidden = !confirming;
+      };
+      start.onclick = () => toggle(true);
+      cancel.onclick = () => toggle(false);
+      confirm.onclick = () => {
+        confirm.disabled = cancel.disabled = true;
+        confirm.textContent = 'Lagrer …';
+        google.script.run
+          .withSuccessHandler(render)
+          .withFailureHandler((err) => {
+            confirm.disabled = cancel.disabled = false;
+            confirm.textContent = action.confirm;
+            alert(`Noe gikk galt: ${err.message || err}`);
+          })[action.fn](code);
+      };
+      return [start, confirm, cancel];
+    }
+
+    render(INITIAL);
+  </script>
+</body>
+</html>

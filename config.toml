@@ -1,0 +1,25 @@
+# Gavekort configuration. Paths are relative to this file.
+
+# The Apps Script web app's /exec URL (Deploy → Manage deployments).
+# Leave empty until deployed: `generate` refuses to run without it, `preview` works anyway.
+web_app_url = "https://script.google.com/macros/s/AKfycbzzLkabzOrhgmFuQxWDhlaIY_UpU89p5qzU9748VopS-iScEM86QKRY7ydkf_tGq-7btQ/exec"
+
+validity_text = "Gyldig i 12 måneder fra kjøpsdato"
+output_dir = "output"
+
+[brand]
+business_name = "Legreid muskel- og massasjeterapeut"  
+background_color = "#c6a792"
+text_color = "#111111"
+accent_color = "#111111"                       # optional, defaults to text_color
+logo = "assets/logo.png"                       # PNG, transparent background works best; "" for none
+booking_url = "https://system.easypractice.net/book/legreid-muskel-og-massasjeterapeut#choose-service"
+booking_text = "Bestill time på nett – trykk her"  # clickable in the PDF; empty → shortened URL
+font_regular = "assets/fonts/Montserrat-Regular.ttf"   # optional .ttf; empty → Helvetica
+font_bold = "assets/fonts/Montserrat-SemiBold.ttf"     # or Montserrat-Bold.ttf for heavier titles
+
+[cards.60]
+title = "60 minutter massasje"
+
+[cards.90]
+title = "90 minutter massasje"
