@@ -32,9 +32,10 @@
     .badge.not-sold { background: var(--grey-bg); color: var(--grey); }
     .badge.active   { background: var(--green-bg); color: var(--green); }
     .badge.redeemed { background: var(--red-bg); color: var(--red); }
-    dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 16px 0; }
-    dt { color: var(--muted); }
-    dd { margin: 0; font-weight: 600; }
+    /* minmax(0, …) lets the value column shrink, so long emails wrap instead of overflowing. */
+    dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 16px 0; }
+    dt { color: var(--muted); white-space: nowrap; }
+    dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
     .note { padding: 12px 14px; border-radius: 12px; margin: 14px 0; }
     .note.warn { background: var(--warn-bg); color: var(--warn); }
     .note.info { background: var(--green-bg); color: var(--green); }
@@ -67,6 +68,12 @@
       const node = Object.assign(document.createElement(tag), props);
       children.flat(Infinity).forEach((c) => node.append(c));
       return node;
+    }
+
+    /** Text with a soft line break after "@", so an email wraps between name and domain. */
+    function breakAfterAt(text) {
+      const at = text.indexOf('@');
+      return at < 0 ? [text] : [text.slice(0, at + 1), el('wbr'), text.slice(at + 1)];
     }
 
     function render(view) {
@@ -107,7 +114,7 @@
         el('h1', { textContent: `Gavekort ${view.type} min` }),
         el('div', { className: 'code', textContent: view.code }),
         el('div', { className: `badge ${BADGE_CLASS[view.status] || 'not-sold'}`, textContent: view.status }),
-        el('dl', {}, rows.map(([k, v]) => [el('dt', { textContent: k }), el('dd', { textContent: v })])),
+        el('dl', {}, rows.map(([k, v]) => [el('dt', { textContent: k }), el('dd', {}, breakAfterAt(v))])),
       ];
       if (view.message) nodes.push(el('div', { className: 'note info', textContent: view.message }));
       if (view.expired && view.status === 'Aktiv') {

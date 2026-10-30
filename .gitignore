@@ -11,3 +11,6 @@ wheels/
 
 # Generated gift cards
 output/
+
+# macOS
+.DS_Store
