@@ -6,8 +6,8 @@
  * Opening the page never changes anything; only the buttons do.
  *
  * Clip cards: column "Klipp" holds the number of treatments (empty = 1, an ordinary
- * card). Each Løs inn adds 1 to "Brukt"; the card stays "Aktiv" until all are used.
- * Every redemption is also appended to the "Logg" sheet.
+ * card). Each Løs inn adds 1 to "Brukt" and sets "Sist brukt"; the card stays "Aktiv"
+ * until all are used. Every use is also appended to the "Logg" sheet, with who did it.
  *
  * Access control (all three must pass):
  *   1. Deployment: execute as the user accessing, anyone with a Google account.
@@ -22,7 +22,7 @@
 
 const SHEET_NAME = 'Gavekort';
 const LOG_SHEET_NAME = 'Logg';
-const LOG_HEADERS = ['Tidspunkt', 'Kode', 'Klipp', 'Innløst av'];
+const LOG_HEADERS = ['Tidspunkt', 'Kode', 'Klipp', 'Brukt av'];
 /** URL parameter with the card code. Never `c` or `sid`: Apps Script reserves them. */
 const CODE_PARAM = 'kode';
 const TIME_ZONE = 'Europe/Oslo';
@@ -30,17 +30,18 @@ const CODE_PATTERN = /^GK-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}-[23456789ABCDEFGH
 
 /** Column headers, in order. Must match SHEET_COLUMNS in src/gavekort/batch.py. */
 const HEADERS = [
-  'Kode', 'Type', 'Format', 'Status', 'Generert', 'Aktivert',
-  'Utløper', 'Innløst', 'Aktivert av', 'Innløst av', 'Notat',
-  'Klipp', 'Brukt',
+  'Kode', 'Type', 'Format', 'Status', 'Klipp', 'Brukt',
+  'Generert', 'Aktivert', 'Utløper', 'Sist brukt',
 ];
 
 /** 1-based column numbers, derived from HEADERS. */
 const COL = Object.freeze({
-  code: 1, type: 2, format: 3, status: 4, generated: 5, activated: 6,
-  expires: 7, redeemed: 8, activatedBy: 9, redeemedBy: 10, note: 11,
-  clips: 12, used: 13,
+  code: 1, type: 2, format: 3, status: 4, clips: 5, used: 6,
+  generated: 7, activated: 8, expires: 9, lastUsed: 10,
 });
+
+/** Headers from earlier layouts, mapped to their current name. Used by migrateColumns_. */
+const RENAMED_HEADERS = Object.freeze({ 'Innløst': 'Sist brukt' });
 
 const STATUS = Object.freeze({
   notSold: 'Ikke solgt',
@@ -57,8 +58,7 @@ const STATUS = Object.freeze({
  * @property {string} [activated]  Formatted date/time, or ""
  * @property {string} [expires]    Formatted date, or ""
  * @property {boolean} [expired]
- * @property {string} [redeemed]   Formatted date/time of the latest redemption, or ""
- * @property {string} [redeemedBy]
+ * @property {string} [lastUsed]   Formatted date/time of the latest use, or ""
  * @property {number} [clips]      Treatments on the card, 1 for an ordinary card
  * @property {number} [used]       Treatments redeemed so far
  * @property {string} [bookingUrl] Only for kind "denied"
@@ -86,13 +86,12 @@ function doGet(e) {
  * @returns {CardView}
  */
 function activate(code) {
-  return transition_(code, STATUS.notSold, null, (sheet, row, now, email) => {
+  return transition_(code, STATUS.notSold, null, (sheet, row, now) => {
     const expires = new Date(now);
     expires.setMonth(expires.getMonth() + validityMonths_());
     sheet.getRange(row, COL.status).setValue(STATUS.active);
     sheet.getRange(row, COL.activated).setValue(now);
     sheet.getRange(row, COL.expires).setValue(expires);
-    sheet.getRange(row, COL.activatedBy).setValue(email);
     return 'Gavekortet er aktivert.';
   });
 }
@@ -110,8 +109,7 @@ function redeem(code, expectedUsed) {
     const card = cardView_(sheet, row);
     const used = card.used + 1;
     sheet.getRange(row, COL.used).setValue(used);
-    sheet.getRange(row, COL.redeemed).setValue(now);
-    sheet.getRange(row, COL.redeemedBy).setValue(email);
+    sheet.getRange(row, COL.lastUsed).setValue(now);
     if (used >= card.clips) {
       sheet.getRange(row, COL.status).setValue(STATUS.redeemed);
     }
@@ -126,6 +124,7 @@ function redeem(code, expectedUsed) {
 
 /**
  * Create or tidy up the "Gavekort" sheet: headers, filter, validation, colours.
+ * Moves the data of a sheet with an older column layout into the current one.
  * Run once from the Apps Script editor (select setupSheet → Run). Safe to re-run.
  */
 function setupSheet() {
@@ -133,22 +132,23 @@ function setupSheet() {
   const sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
   const maxRows = sheet.getMaxRows();
 
+  const filter = sheet.getFilter();
+  if (filter && filter.getRange().getNumColumns() !== HEADERS.length) {
+    filter.remove(); // Made for another column layout: recreate it below.
+  }
+  migrateColumns_(ss, sheet);
   sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
   sheet.setFrozenRows(1);
-  const filter = sheet.getFilter();
-  if (filter && filter.getRange().getNumColumns() < HEADERS.length) {
-    filter.remove(); // Created before columns were added: recreate it over all of them.
-  }
   if (!sheet.getFilter()) {
     sheet.getRange(1, 1, maxRows, HEADERS.length).createFilter();
   }
 
   sheet.getRange(2, COL.code, maxRows - 1, 1).setFontFamily('Roboto Mono');
   sheet.getRange(2, COL.type, maxRows - 1, 1).setNumberFormat('@').setHorizontalAlignment('center');
+  sheet.getRange(2, COL.clips, maxRows - 1, 2).setNumberFormat('0').setHorizontalAlignment('center');
   sheet.getRange(2, COL.generated, maxRows - 1, 2).setNumberFormat('yyyy-mm-dd hh:mm');
   sheet.getRange(2, COL.expires, maxRows - 1, 1).setNumberFormat('yyyy-mm-dd');
-  sheet.getRange(2, COL.redeemed, maxRows - 1, 1).setNumberFormat('yyyy-mm-dd hh:mm');
-  sheet.getRange(2, COL.clips, maxRows - 1, 2).setNumberFormat('0').setHorizontalAlignment('center');
+  sheet.getRange(2, COL.lastUsed, maxRows - 1, 1).setNumberFormat('yyyy-mm-dd hh:mm');
 
   const statusRange = sheet.getRange(2, COL.status, maxRows - 1, 1);
   statusRange.setDataValidation(
@@ -173,6 +173,7 @@ function setupSheet() {
   sheet.autoResizeColumns(1, HEADERS.length);
 
   const log = logSheet_(ss);
+  log.getRange(1, 1, 1, LOG_HEADERS.length).setValues([LOG_HEADERS]); // "Innløst av" → "Brukt av"
   log.getRange(2, 1, log.getMaxRows() - 1, 1).setNumberFormat('yyyy-mm-dd hh:mm');
   log.autoResizeColumns(1, LOG_HEADERS.length);
 }
@@ -277,11 +278,51 @@ function cardView_(sheet, row) {
     activated: formatDate_(at(COL.activated), 'd. MMM yyyy HH:mm'),
     expires: formatDate_(expires, 'd. MMM yyyy'),
     expired: expires instanceof Date && expires.getTime() < Date.now(),
-    redeemed: formatDate_(at(COL.redeemed), 'd. MMM yyyy HH:mm'),
-    redeemedBy: String(at(COL.redeemedBy) || ''),
+    lastUsed: formatDate_(at(COL.lastUsed), 'd. MMM yyyy HH:mm'),
     clips: positiveInt_(at(COL.clips), 1),
     used: Math.max(parseInt(at(COL.used), 10) || 0, 0),
   };
+}
+
+/**
+ * Rewrite the rows of a sheet with an older column layout in the order of HEADERS,
+ * matching columns by header name. Columns that no longer exist ("Notat",
+ * "Aktivert av", "Innløst av") are dropped; if any "Notat" has text, the sheet is
+ * first copied to a backup tab so no notes are lost. Does nothing if the layout is current.
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
+ */
+function migrateColumns_(ss, sheet) {
+  const width = Math.max(sheet.getLastColumn(), 1);
+  const old = sheet.getRange(1, 1, 1, width).getValues()[0].map((h) => String(h).trim());
+  if (old.join('|') === HEADERS.join('|')) {
+    return;
+  }
+  const rowCount = sheet.getLastRow() - 1;
+  if (rowCount > 0 && old[0] !== 'Kode') {
+    throw new Error(`Kjenner ikke igjen kolonnene i «${SHEET_NAME}» (A1 er «${old[0]}»). Ryd arket for hånd.`);
+  }
+  if (rowCount > 0) {
+    const values = sheet.getRange(2, 1, rowCount, width).getValues();
+    const index = {};
+    old.forEach((h, i) => { index[RENAMED_HEADERS[h] || h] = i; });
+    const noteCol = old.indexOf('Notat');
+    if (noteCol >= 0 && values.some((row) => String(row[noteCol]).trim() !== '')) {
+      const stamp = Utilities.formatDate(new Date(), TIME_ZONE, 'yyyy-MM-dd HH.mm');
+      sheet.copyTo(ss).setName(`${SHEET_NAME} (backup ${stamp})`);
+    }
+    const rows = values.map((row) => HEADERS.map((h) => {
+      if (h in index) return row[index[h]];
+      if (h === 'Klipp') return 1;
+      if (h === 'Brukt') return String(row[index.Status]) === STATUS.redeemed ? 1 : 0;
+      return '';
+    }));
+    sheet.getRange(2, 1, rowCount, HEADERS.length).setValues(rows);
+  }
+  sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+  if (width > HEADERS.length) {
+    sheet.getRange(1, HEADERS.length + 1, sheet.getMaxRows(), width - HEADERS.length).clear();
+  }
 }
 
 /**

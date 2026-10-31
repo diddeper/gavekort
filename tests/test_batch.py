@@ -34,7 +34,7 @@ def test_digital_batch_writes_pdfs_and_csv(cfg: Config) -> None:
     assert {(r["Type"], r["Format"], r["Status"], r["Generert"]) for r in rows} == {
         ("60", "Digital", "Ikke solgt", "2026-10-30 13:12")
     }
-    assert all(r["Aktivert"] == r["Innløst"] == "" for r in rows)
+    assert all(r["Aktivert"] == r["Sist brukt"] == "" for r in rows)
     assert {(r["Klipp"], r["Brukt"]) for r in rows} == {("1", "0")}
 
 

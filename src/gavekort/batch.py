@@ -35,15 +35,12 @@ SHEET_COLUMNS = (
     "Type",
     "Format",
     "Status",
+    "Klipp",
+    "Brukt",
     "Generert",
     "Aktivert",
     "Utløper",
-    "Innløst",
-    "Aktivert av",
-    "Innløst av",
-    "Notat",
-    "Klipp",
-    "Brukt",
+    "Sist brukt",
 )
 """Column headers, identical to the ``Gavekort`` sheet set up by ``setupSheet()``."""
 

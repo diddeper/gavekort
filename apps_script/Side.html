@@ -150,8 +150,7 @@
       if (view.expires) rows.push(['Utløper', view.expires]);
       const clipCard = view.clips > 1;
       if (clipCard) rows.push(['Klipp', `${view.used} av ${view.clips} brukt`]);
-      if (view.redeemed) rows.push([clipCard ? 'Sist brukt' : 'Innløst', view.redeemed]);
-      if (view.redeemedBy) rows.push([clipCard ? 'Sist brukt av' : 'Innløst av', view.redeemedBy]);
+      if (view.lastUsed) rows.push(['Sist brukt', view.lastUsed]);
 
       const nodes = [
         topRow(view.code, clipCard ? `${view.clips} × ${view.type} min` : ''),
