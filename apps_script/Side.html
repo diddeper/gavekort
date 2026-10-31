@@ -154,7 +154,7 @@
 
       const nodes = [
         topRow(view.code, clipCard ? `${view.clips} × ${view.type} min` : ''),
-        el('p', { className: 'name', textContent: clipCard ? `${view.clips} × ${view.type} min` : `${view.type} min` }),
+        el('p', { className: 'name', textContent: clipCard ? `${view.clips - view.used} igjen` : `${view.type} min` }),
         el('div', { className: `badge ${BADGE_CLASS[view.status] || 'not-sold'}`, textContent: view.status }),
       ];
       if (rows.length) {
