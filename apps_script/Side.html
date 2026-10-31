@@ -19,7 +19,7 @@
       --name-size: 52px; --name-tracking: .08em;
       --tagline-size: 16px; --tagline-tracking: .26em;
       --link-size: 14px; --link-tracking: .18em;
-      --eyebrow-bottom: 14px; --top-gap: 12px; --name-gap: 10px;
+      --eyebrow-bottom: 14px; --eyebrow-divider-gap: 20px; --top-gap: 12px; --name-gap: 10px;
       --link-gap: 36px; --link-underline-gap: 4px;
 
       /* Page-only: muted text and status colours. */
@@ -43,6 +43,10 @@
            margin-bottom: calc(var(--eyebrow-bottom) + var(--top-gap)); }
     .eyebrow { font-size: var(--eyebrow-size); font-weight: var(--medium); letter-spacing: var(--eyebrow-tracking);
                line-height: 1; text-transform: uppercase; margin: 0; }
+    /* Clip cards: "GAVEKORT │ 5 × 60 MIN". The trailing tracking is cancelled so both gaps match. */
+    .divider { display: inline-block; width: 0; height: .84em; vertical-align: -.07em;
+               border-left: 1px solid var(--text);
+               margin: 0 calc(var(--eyebrow-divider-gap) - var(--eyebrow-tracking)) 0 calc(var(--eyebrow-divider-gap) - var(--eyebrow-tracking)); }
     .validity { font-size: var(--validity-size); letter-spacing: var(--validity-tracking); line-height: 1; }
     .name { font-size: var(--name-size); font-weight: var(--light); letter-spacing: var(--name-tracking);
             line-height: 1.05; margin: 0 0 var(--name-gap); }
@@ -112,10 +116,11 @@
                                   renderCard(view)));
     }
 
-    /** "GAVEKORT" with an optional small line opposite it, like the card's top row. */
-    function topRow(right) {
+    /** "GAVEKORT" (plus e.g. "│ 5 × 60 min" on clip cards) with an optional small line opposite it, like the card's top row. */
+    function topRow(right, extra) {
       return el('div', { className: 'top' },
-        el('h1', { className: 'eyebrow', textContent: 'Gavekort' }),
+        el('h1', { className: 'eyebrow' }, 'Gavekort',
+          extra ? [el('span', { className: 'divider', ariaHidden: 'true' }), extra] : []),
         right ? el('span', { className: 'validity', textContent: right }) : []);
     }
 
@@ -149,7 +154,7 @@
       if (view.redeemedBy) rows.push([clipCard ? 'Sist brukt av' : 'Innløst av', view.redeemedBy]);
 
       const nodes = [
-        topRow(view.code),
+        topRow(view.code, clipCard ? `${view.clips} × ${view.type} min` : ''),
         el('p', { className: 'name', textContent: clipCard ? `${view.clips} × ${view.type} min` : `${view.type} min` }),
         el('div', { className: `badge ${BADGE_CLASS[view.status] || 'not-sold'}`, textContent: view.status }),
       ];

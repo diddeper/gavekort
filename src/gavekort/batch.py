@@ -11,7 +11,6 @@ Each batch is written to its own folder::
 """
 
 import csv
-import dataclasses
 from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import datetime
@@ -106,13 +105,11 @@ def generate(
     directory = _new_batch_dir(cfg.output_dir, card_type, clips, now)
     batch_codes = _unique_codes(count)
     spec = cfg.cards[card_type]
-    if clips > 1:
-        spec = dataclasses.replace(spec, title=f"{clips} × {spec.title}")
 
     for code in batch_codes:
         url = qr.card_url(base_url, code)
         if OutputFormat.PDF in formats:
-            pdf = render_card(spec, cfg.brand, code, url, cfg.validity_text)
+            pdf = render_card(spec, cfg.brand, code, url, cfg.validity_text, clips=clips)
             _write(directory / "pdf" / f"{code}.pdf", pdf)
         if OutputFormat.PNG in formats or OutputFormat.SVG in formats:
             symbol = qr.make(url)

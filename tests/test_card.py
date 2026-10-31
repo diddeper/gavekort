@@ -15,13 +15,14 @@ from tests.conftest import BOOKING_URL
 FONTS = Path(__file__).parent.parent / "assets" / "fonts"
 
 
-def _render(cfg: Config) -> PdfReader:
+def _render(cfg: Config, clips: int = 1) -> PdfReader:
     pdf = render_card(
         cfg.cards[CardType.MIN_60],
         cfg.brand,
         "GK-ABCD-EFGH",
         "https://x.test/exec?kode=GK-ABCD-EFGH",
         cfg.validity_text,
+        clips=clips,
     )
     return PdfReader(io.BytesIO(pdf))
 
@@ -44,6 +45,16 @@ def test_contains_name_and_validity_but_not_code_or_title(cfg: Config) -> None:
     # Code and treatment are tracked in the sheet, not printed on the card.
     assert "GK-ABCD-EFGH" not in text
     assert "minutter" not in text
+    assert "MIN" not in text
+
+
+def test_clip_card_prints_count_in_top_row(cfg: Config) -> None:
+    reader = _render(cfg, clips=5)
+    text = "".join(reader.pages[0].extract_text().split())
+    assert "GAVEKORT" in text
+    assert "5×60MIN" in text
+    assert reader.metadata is not None
+    assert "5 × " in str(reader.metadata.title)
 
 
 def test_booking_link_is_clickable(cfg: Config) -> None:

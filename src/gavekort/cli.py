@@ -52,9 +52,12 @@ def _generate(args: argparse.Namespace, cfg: Config) -> int:
 def _preview(args: argparse.Namespace, cfg: Config) -> int:
     card_type = CardType(args.type)
     url = qr.card_url(cfg.web_app_url or _PREVIEW_URL, _PREVIEW_CODE)
-    pdf = render_card(cfg.cards[card_type], cfg.brand, _PREVIEW_CODE, url, cfg.validity_text)
+    pdf = render_card(
+        cfg.cards[card_type], cfg.brand, _PREVIEW_CODE, url, cfg.validity_text, clips=args.klipp
+    )
     cfg.output_dir.mkdir(parents=True, exist_ok=True)
-    path = cfg.output_dir / f"preview_{card_type.value}.pdf"
+    suffix = f"_{args.klipp}klipp" if args.klipp > 1 else ""
+    path = cfg.output_dir / f"preview_{card_type.value}{suffix}.pdf"
     path.write_bytes(pdf)
     print(f"Forhåndsvisning: {path}")
     if not args.no_open and sys.platform == "darwin":
@@ -102,5 +105,6 @@ def _build_parser() -> argparse.ArgumentParser:
 
     prev = sub.add_parser("preview", help="render a sample card to check the design")
     prev.add_argument("--type", required=True, choices=types, help="treatment length in minutes")
+    prev.add_argument("--klipp", type=_positive_int, default=1, help="treatments per card")
     prev.add_argument("--no-open", action="store_true", help="do not open the PDF afterwards")
     return parser

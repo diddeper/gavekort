@@ -39,12 +39,12 @@ def test_digital_batch_writes_pdfs_and_csv(cfg: Config) -> None:
 
 
 def test_clip_card_batch(cfg: Config, monkeypatch: pytest.MonkeyPatch) -> None:
-    titles: list[str] = []
+    seen: list[int] = []
     real_render = batch.render_card
 
-    def spy(spec: CardSpec, *args: object) -> bytes:
-        titles.append(spec.title)
-        return real_render(spec, *args)  # type: ignore[arg-type]
+    def spy(spec: CardSpec, *args: object, clips: int = 1) -> bytes:
+        seen.append(clips)
+        return real_render(spec, *args, clips=clips)  # type: ignore[arg-type]
 
     monkeypatch.setattr(batch, "render_card", spy)
     result = generate(CardType.MIN_90, 2, [OutputFormat.PDF], cfg, clips=5, now=NOW)
@@ -53,7 +53,7 @@ def test_clip_card_batch(cfg: Config, monkeypatch: pytest.MonkeyPatch) -> None:
     assert {(r["Type"], r["Klipp"], r["Brukt"]) for r in _rows(result.import_path)} == {
         ("90", "5", "0")
     }
-    assert titles == [f"5 × {cfg.cards[CardType.MIN_90].title}"] * 2
+    assert seen == [5, 5]
 
 
 def test_overview_csv_has_header_and_import_csv_does_not(cfg: Config) -> None:

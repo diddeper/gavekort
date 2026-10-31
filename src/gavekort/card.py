@@ -1,7 +1,8 @@
 """Draw a branded gift card PDF with reportlab.
 
 The layout follows design "1c alt 3" (``Gavekort.dc.html`` in Claude Design):
-"GAVEKORT" with the validity line opposite it, name, tagline and booking link
+"GAVEKORT" (on clip cards followed by a thin divider and e.g. "5 × 60 MIN") with
+the validity line opposite it, name, tagline and booking link
 top left, a large QR with a small "skannes ved oppmøte" caption bottom left,
 and the hands mark bleeding off the bottom-right corner. The design is drawn on
 a 1012 x 638 px canvas; :data:`LAYOUT` keeps its measurements in those pixels
@@ -66,6 +67,7 @@ class Layout:
     eyebrow: TextStyle = TextStyle(20, 0.28, 1)
     validity: TextStyle = TextStyle(12, 0.06, 1)
     eyebrow_bottom: float = 14
+    eyebrow_divider_gap: float = 20
     top_gap: float = 12
     name: TextStyle = TextStyle(52, 0.08, 1.05)
     name_gap: float = 10
@@ -100,7 +102,9 @@ class _Mark:
     subpaths: list[list[tuple[float, float]]]
 
 
-def render_card(spec: CardSpec, brand: Brand, code: str, url: str, validity_text: str) -> bytes:
+def render_card(
+    spec: CardSpec, brand: Brand, code: str, url: str, validity_text: str, *, clips: int = 1
+) -> bytes:
     """Render one gift card and return the PDF as bytes.
 
     Args:
@@ -109,11 +113,14 @@ def render_card(spec: CardSpec, brand: Brand, code: str, url: str, validity_text
         code: The card code; only used in the PDF metadata (it is tracked in the sheet).
         url: The URL the QR code encodes.
         validity_text: Line printed top right, e.g. "Gyldig i 12 måneder fra kjøpsdato".
+        clips: Treatments on the card. Above 1, the top row reads
+            "GAVEKORT │ 5 × 60 MIN".
     """
     buffer = io.BytesIO()
     width, height = PAGE_SIZE
     c = Canvas(buffer, pagesize=PAGE_SIZE, pageCompression=1)
-    c.setTitle(f"Gavekort {spec.title} – {code}")
+    title = f"{clips} × {spec.title}" if clips > 1 else spec.title
+    c.setTitle(f"Gavekort {title} – {code}")
     c.setAuthor(brand.business_name)
 
     fonts = _register_fonts(brand)
@@ -139,6 +146,8 @@ def render_card(spec: CardSpec, brand: Brand, code: str, url: str, validity_text
     # Top row: eyebrow left, validity right, vertically centred on each other.
     top = lay.pad_y
     _draw_text(c, "GAVEKORT", fonts.bold, lay.eyebrow, left, top)
+    if clips > 1:
+        _draw_clip_count(c, f"{clips} × {spec.card_type.value} MIN", fonts.bold, left, top)
     validity_top = top + _cap_middle(lay.eyebrow) - _cap_middle(lay.validity)
     validity_width = _text_width(validity_text, fonts.regular, lay.validity)
     _draw_text(c, validity_text, fonts.regular, lay.validity, right - validity_width, validity_top)
@@ -167,6 +176,26 @@ def render_card(spec: CardSpec, brand: Brand, code: str, url: str, validity_text
     c.showPage()
     c.save()
     return buffer.getvalue()
+
+
+def _draw_clip_count(c: Canvas, text: str, font: str, left: float, top: float) -> None:
+    """Draw a cap-height divider after "GAVEKORT" at ``(left, top)``, then ``text``."""
+    lay = LAYOUT
+    style = lay.eyebrow
+    # _text_width includes the trailing letter spacing; drop it so both gaps look equal.
+    eyebrow_end = left + _text_width("GAVEKORT", font, style) - style.size * style.tracking
+    divider_x = eyebrow_end + lay.eyebrow_divider_gap
+    middle = top + _cap_middle(style)
+    half = style.size * _CAP_HEIGHT * 1.2 / 2
+    page_height = PAGE_SIZE[1]
+    c.setLineWidth(_px(1))
+    c.line(
+        _px(divider_x),
+        page_height - _px(middle - half),
+        _px(divider_x),
+        page_height - _px(middle + half),
+    )
+    _draw_text(c, text, font, style, divider_x + lay.eyebrow_divider_gap, top)
 
 
 def _draw_link(c: Canvas, brand: Brand, font: str, left: float, top: float) -> None:

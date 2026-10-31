@@ -16,7 +16,14 @@ ROOT = Path(__file__).parent.parent
 HTML = (ROOT / "apps_script" / "Side.html").read_text(encoding="utf-8")
 
 TEXT_STYLES = ["eyebrow", "validity", "name", "tagline", "link"]
-GAPS = ["eyebrow_bottom", "top_gap", "name_gap", "link_gap", "link_underline_gap"]
+GAPS = [
+    "eyebrow_bottom",
+    "eyebrow_divider_gap",
+    "top_gap",
+    "name_gap",
+    "link_gap",
+    "link_underline_gap",
+]
 WEIGHTS = {
     "light": ("font_light", 300),
     "regular": ("font_regular", 400),
