@@ -143,12 +143,14 @@
       const rows = [];
       if (view.activated) rows.push(['Aktivert', view.activated]);
       if (view.expires) rows.push(['Utløper', view.expires]);
-      if (view.redeemed) rows.push(['Innløst', view.redeemed]);
-      if (view.redeemedBy) rows.push(['Innløst av', view.redeemedBy]);
+      const clipCard = view.clips > 1;
+      if (clipCard) rows.push(['Klipp', `${view.used} av ${view.clips} brukt`]);
+      if (view.redeemed) rows.push([clipCard ? 'Sist brukt' : 'Innløst', view.redeemed]);
+      if (view.redeemedBy) rows.push([clipCard ? 'Sist brukt av' : 'Innløst av', view.redeemedBy]);
 
       const nodes = [
         topRow(view.code),
-        el('p', { className: 'name', textContent: `${view.type} min` }),
+        el('p', { className: 'name', textContent: clipCard ? `${view.clips} × ${view.type} min` : `${view.type} min` }),
         el('div', { className: `badge ${BADGE_CLASS[view.status] || 'not-sold'}`, textContent: view.status }),
       ];
       if (rows.length) {
@@ -158,13 +160,18 @@
       if (view.expired && view.status === 'Aktiv') {
         nodes.push(el('div', { className: 'note warn', textContent: `Utløpt ${view.expires}. Du kan fortsatt løse det inn om du vil.` }));
       }
-      const action = ACTIONS[view.status];
-      if (action) nodes.push(el('div', { className: 'actions' }, renderAction(view.code, action)));
+      let action = ACTIONS[view.status];
+      if (action && action.fn === 'redeem' && clipCard) {
+        action = Object.assign({}, action, { label: `Løs inn klipp (${view.clips - view.used} igjen)` });
+      }
+      // redeem also gets the "Brukt" count shown, so a double tap can't use two clips.
+      const args = action && action.fn === 'redeem' ? [view.code, view.used] : [view.code];
+      if (action) nodes.push(el('div', { className: 'actions' }, renderAction(action, args)));
       return nodes;
     }
 
     /** Two-step button: first tap reveals confirm/cancel, second tap performs the action. */
-    function renderAction(code, action) {
+    function renderAction(action, args) {
       const start = el('button', { className: 'primary', textContent: action.label });
       const confirm = el('button', { className: 'primary', textContent: action.confirm, hidden: true });
       const cancel = el('button', { className: 'secondary', textContent: 'Avbryt', hidden: true });
@@ -182,7 +189,7 @@
             confirm.disabled = cancel.disabled = false;
             confirm.textContent = action.confirm;
             alert(`Noe gikk galt: ${err.message || err}`);
-          })[action.fn](code);
+          })[action.fn](...args);
       };
       return [start, confirm, cancel];
     }

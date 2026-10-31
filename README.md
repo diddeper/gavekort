@@ -1,6 +1,6 @@
 # Gavekort
 
-Gift cards for 60 and 90 min massages. Each card has a unique QR code, and the cards are tracked in a private Google Sheet.
+Gift cards for 60 and 90 min massages, either for one treatment or as clip cards (e.g. 5 × 60 min). Each card has a unique QR code, and the cards are tracked in a private Google Sheet.
 
 - **Python** generates branded PDF cards (digital) and/or QR images (PNG/SVG for physical cards), plus a CSV to import into the sheet.
 - **Google Sheets + Apps Script** tracks each card. Scanning a card's QR with the iPhone camera opens a small web app. It shows the card's status and offers one tap to **Aktiver** (sold) or **Løs inn** (redeem).
@@ -109,6 +109,14 @@ uv run gavekort generate --type 90 --count 30 --format png,svg --label
 
 Use `--format pdf,png,svg` to get both.
 
+**Make clip cards** (several treatments on one card) with `--klipp`. Without it a card has 1 treatment:
+
+```sh
+uv run gavekort generate --type 60 --count 5 --klipp 5
+```
+
+A clip card stays **Aktiv** until every treatment is used. Each **Løs inn** uses one, and the page shows how many are left. The printed card looks the same as an ordinary one; the sheet keeps the count.
+
 Each batch goes into its own folder, e.g. `output/2026-10-30_1312_60min/`, which contains:
 
 - `pdf/` and/or `qr/`: the cards
@@ -119,9 +127,11 @@ Each batch goes into its own folder, e.g. `output/2026-10-30_1312_60min/`, which
 
 **Selling a card:** send the PDF, or hand over the physical card. Then scan it and tap **Aktiver (solgt) → Bekreft aktivering**.
 
-**When the customer comes in:** scan the QR on their phone or card and tap **Løs inn → Bekreft innløsning**.
+**When the customer comes in:** scan the QR on their phone or card and tap **Løs inn → Bekreft innløsning** (on a clip card: **Løs inn klipp**). A double tap or a page left open from before never uses two clips: the page sends the count it showed, and if that has changed, nothing happens.
 
-**Overview:** the sheet itself. Columns: `Kode | Type | Format | Status | Generert | Aktivert | Utløper | Innløst | Aktivert av | Innløst av | Notat`. Filter on Status or Type. Each change records the time and who made it. To undo a mistake, edit the row by hand (for example set Status back to `Aktiv` and clear `Innløst`/`Innløst av`). `Notat` is free text for your own notes.
+**Overview:** the sheet itself. Columns: `Kode | Type | Format | Status | Generert | Aktivert | Utløper | Innløst | Aktivert av | Innløst av | Notat | Klipp | Brukt`. Filter on Status or Type. Each change records the time and who made it. `Klipp` is the number of treatments (empty means 1) and `Brukt` how many are used. On a clip card `Innløst`/`Innløst av` show the latest use. Every redemption is also added as a row in the `Logg` tab. To undo a mistake, edit the row by hand (for example set Status back to `Aktiv`, lower `Brukt` by one and clear `Innløst`/`Innløst av`). `Notat` is free text for your own notes.
+
+**Upgrading an existing sheet** to clip cards: paste the new `Kode.gs` and `Side.html`, run `setupSheet` once (it adds the `Klipp`/`Brukt` headers, widens the filter and creates `Logg`), then **Deploy → Manage deployments → Edit → New version**. Existing cards keep working as 1-treatment cards.
 
 **Test cards:** after testing, delete the test rows in the sheet and the test batch folder under `output/`.
 

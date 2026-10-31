@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from gavekort import codes
+from gavekort import batch, codes
 from gavekort.batch import SHEET_COLUMNS, OutputFormat, generate
-from gavekort.config import CardType, Config, ConfigError, load
+from gavekort.config import CardSpec, CardType, Config, ConfigError, load
 from tests.conftest import write_config
 
 NOW = datetime(2026, 10, 30, 13, 12)
@@ -35,6 +35,25 @@ def test_digital_batch_writes_pdfs_and_csv(cfg: Config) -> None:
         ("60", "Digital", "Ikke solgt", "2026-10-30 13:12")
     }
     assert all(r["Aktivert"] == r["Innløst"] == "" for r in rows)
+    assert {(r["Klipp"], r["Brukt"]) for r in rows} == {("1", "0")}
+
+
+def test_clip_card_batch(cfg: Config, monkeypatch: pytest.MonkeyPatch) -> None:
+    titles: list[str] = []
+    real_render = batch.render_card
+
+    def spy(spec: CardSpec, *args: object) -> bytes:
+        titles.append(spec.title)
+        return real_render(spec, *args)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(batch, "render_card", spy)
+    result = generate(CardType.MIN_90, 2, [OutputFormat.PDF], cfg, clips=5, now=NOW)
+
+    assert result.directory.name == "2026-10-30_1312_90min_5klipp"
+    assert {(r["Type"], r["Klipp"], r["Brukt"]) for r in _rows(result.import_path)} == {
+        ("90", "5", "0")
+    }
+    assert titles == [f"5 × {cfg.cards[CardType.MIN_90].title}"] * 2
 
 
 def test_overview_csv_has_header_and_import_csv_does_not(cfg: Config) -> None:
@@ -73,3 +92,5 @@ def test_rejects_invalid_arguments(cfg: Config) -> None:
         generate(CardType.MIN_60, 0, [OutputFormat.PDF], cfg)
     with pytest.raises(ValueError):
         generate(CardType.MIN_60, 1, [], cfg)
+    with pytest.raises(ValueError):
+        generate(CardType.MIN_60, 1, [OutputFormat.PDF], cfg, clips=0)

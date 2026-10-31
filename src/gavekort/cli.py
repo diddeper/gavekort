@@ -39,9 +39,11 @@ def _generate(args: argparse.Namespace, cfg: Config) -> int:
         args.count,
         args.format,
         cfg,
+        clips=args.klipp,
         label=args.label,
     )
-    print(f"Laget {len(result.codes)} gavekort ({args.type} min) i {result.directory}")
+    kind = f"{args.klipp} × {args.type} min" if args.klipp > 1 else f"{args.type} min"
+    print(f"Laget {len(result.codes)} gavekort ({kind}) i {result.directory}")
     print(f"Oversikt: {result.csv_path}")
     print(f"Importer {result.import_path} i arket: Fil → Importer → Legg til i gjeldende ark.")
     return 0
@@ -89,6 +91,12 @@ def _build_parser() -> argparse.ArgumentParser:
         type=_formats,
         default=[batch.OutputFormat.PDF],
         help="comma-separated: pdf (digital card), png and/or svg (QR for physical cards)",
+    )
+    gen.add_argument(
+        "--klipp",
+        type=_positive_int,
+        default=1,
+        help="treatments per card (default 1); more than 1 makes a clip card",
     )
     gen.add_argument("--label", action="store_true", help="print the code under PNG/SVG QRs")
 
